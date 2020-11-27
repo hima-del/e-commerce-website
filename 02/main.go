@@ -7,8 +7,10 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
@@ -47,21 +49,29 @@ type TokenDetails struct {
 }
 
 type Product struct {
+	ID      int     `json:"id"`
 	Name    string  `json:"name"`
 	Price   float64 `json:"price"`
 	Picture string  `json:"picture"`
+	Created *time.Time
 }
+
+type Timestamp *time.Time
 
 func main() {
 	r := mux.NewRouter()
-	r.HandleFunc("/signup", signup)
-	r.HandleFunc("/login", login)
+	r.HandleFunc("/signup", signup).Methods("POST")
+	r.HandleFunc("/login", login).Methods("POST")
 	r.HandleFunc("/products/", getProducts).Methods("GET")
 	r.HandleFunc("/products/", createProduct).Methods("POST")
-	//r.HandleFunc("/products/:id", updateProduct)
-	r.HandleFunc("/products/:id", getSingleProduct).Methods("GET")
-	//r.HandleFunc("/products/:id", deleteProduct)
-	r.HandleFunc("/logout", logout)
+	//r.HandleFunc("/products/:id", updateProduct).Methods("PUT")
+	r.HandleFunc("/products/{id:[0-9]+}", getSingleProduct).Methods("GET")
+	r.HandleFunc("/products/{id:[0-9]+}", deleteProduct).Methods("DELETE")
+	r.HandleFunc("/logout", logout).Methods("POST")
+	//r.Handle("/products/{rest}", http.StripPrefix("/products/", http.FileServer(http.Dir("/d/training-project-2-repo/e-commerce-website/02/products/"))))
+	// fs := http.FileServer(http.Dir("/d/training-project-2-repo/e-commerce-website/02/products"))
+	// r.Handle("/products/{rest}", http.StripPrefix("/products", fs))
+	//r.PathPrefix("/products/{rest}").Handler(http.StripPrefix("/products/", http.FileServer(http.Dir("/02/products/"))))
 	http.ListenAndServe(":80", r)
 }
 
@@ -224,7 +234,6 @@ func login(w http.ResponseWriter, req *http.Request) {
 }
 
 func getSingleProduct(w http.ResponseWriter, req *http.Request) {
-	fmt.Println("bye")
 	if req.Method != "GET" {
 		http.Error(w, http.StatusText(405), http.StatusMethodNotAllowed)
 		return
@@ -240,9 +249,70 @@ func getSingleProduct(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
-	fmt.Println("hi")
 	vars := mux.Vars(req)
 	fmt.Println("vars", vars)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	row := db.QueryRow("select * from products where id=$1", id)
+	pdct := Product{}
+	err = row.Scan(&pdct.ID, &pdct.Name, &pdct.Price, &pdct.Picture, &pdct.Created)
+	switch {
+	case err == sql.ErrNoRows:
+		http.NotFound(w, req)
+		return
+	case err != nil:
+		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+		return
+	}
+	js, err := json.Marshal(pdct)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
+}
+
+func deleteProduct(w http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodDelete {
+		http.Error(w, http.StatusText(405), http.StatusMethodNotAllowed)
+		return
+	}
+	blacklistToken := checkBlacklist(w, req)
+	if blacklistToken != "" {
+		w.WriteHeader(http.StatusUnauthorized)
+	}
+	err := tokenValid(w, req)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	vars := mux.Vars(req)
+	fmt.Println("vars", vars)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	result := db.QueryRow("select picture from products where id=$1", id)
+	var deletedpicture string
+	err = result.Scan(&deletedpicture)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	fmt.Println("picture", deletedpicture)
+	picturename := "products/" + deletedpicture
+	fmt.Println("picturename", picturename)
+	err = os.Remove(picturename)
+	_, err = db.Query("delete from products where id=$1", id)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
 }
 
 func getProducts(w http.ResponseWriter, req *http.Request) {
@@ -269,7 +339,7 @@ func getProducts(w http.ResponseWriter, req *http.Request) {
 	productslist := make([]Product, 0)
 	for rows.Next() {
 		pdct := Product{}
-		err := rows.Scan(&pdct.Name, &pdct.Price, &pdct.Picture)
+		err := rows.Scan(&pdct.ID, &pdct.Name, &pdct.Price, &pdct.Picture, &pdct.Created)
 		if err != nil {
 			http.Error(w, http.StatusText(500), 500)
 			return
@@ -323,7 +393,7 @@ func createProduct(w http.ResponseWriter, req *http.Request) {
 	fmt.Println("uploaded file:", header.Filename)
 	fmt.Println("file size:", header.Size)
 	fmt.Println("MIME header:", header.Header)
-	tempFile, err := ioutil.TempFile("temp-images", "upload-*.png")
+	tempFile, err := ioutil.TempFile("products", "upload-*.png")
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -338,18 +408,42 @@ func createProduct(w http.ResponseWriter, req *http.Request) {
 	fmt.Println("successfully uploaded file")
 	fileName := tempFile.Name()
 	fmt.Println(fileName)
-	v := strings.TrimPrefix(fileName, `temp-images\`)
+	v := strings.TrimPrefix(fileName, `products\`)
 	//pdcts := Product{n, s, v}
 	//fmt.Println("pdcts", pdcts)
 	_, err = db.Query("insert into products (name,price,picture)values($1,$2,$3)", n, s, v)
 	if err != nil {
-		fmt.Println("internal server error")
+		fmt.Println("error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	resultCreate := db.QueryRow("select * from products where name=$1", n)
+	fmt.Println("n:", n)
+	fmt.Println("s:", s)
+	fmt.Println("v:", v)
+
+	resultCreate := db.QueryRow("select id from products where picture=$1", v)
+	var id int
+	err = resultCreate.Scan(&id)
+	fmt.Println("id", id)
+	if err != nil {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	createdat := db.QueryRow("select created_at from products where id=$1", id)
+	//now := time.Now()
+	var date (Timestamp)
+	err = createdat.Scan(&date)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	fmt.Println("created at", date)
+	row := db.QueryRow("select * from products where id=$1", id)
+	//fmt.Println("resultcreate", resultCreate)
+	fmt.Println("row", row)
 	pd := Product{}
-	resultCreate.Scan(&pd.Name, &pd.Price, &pd.Picture)
+	err = row.Scan(&pd.ID, &pd.Name, &pd.Price, &pd.Picture, &pd.Created)
 	fmt.Println("pd", pd)
 	switch {
 	case err == sql.ErrNoRows:

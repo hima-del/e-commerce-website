@@ -34,29 +34,18 @@
  );
 
  CREATE TABLE "products"("id" bigserial PRIMARY KEY,
- "category id"INT NOT NULL,
  "name"TEXT NOT NULL,
- "description"TEXT NOT NULL,
  "price"FLOAT NOT NULL,
  "picture"TEXT NOT NULL,
  "created_at" timestamptz NOT NULL DEFAULT (now())
  );
  
 
- CREATE TABLE "category"("id"bigserial PRIMARY KEY,
- "category name"TEXT NOT NULL,
- "description"TEXT NOT NULL,
- "picture"TEXT NOT NULL,
- "created_at" timestamptz NOT NULL DEFAULT (now())
- );
-
  CREATE TABLE "blacklist"("token"TEXT NOT NULL);
 
 ALTER TABLE "address" ADD FOREIGN KEY ("customer id") REFERENCES "customers"("id");
 
 ALTER TABLE "orders" ADD FOREIGN KEY ("customer id") REFERENCES "customers"("id");
-
-ALTER TABLE "products" ADD FOREIGN KEY ("category id") REFERENCES "category"("id");
 
 ALTER TABLE "order_details" ADD FOREIGN KEY ("product id") REFERENCES "products"("id");
 

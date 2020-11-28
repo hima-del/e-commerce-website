@@ -64,7 +64,7 @@ func main() {
 	r.HandleFunc("/login", login).Methods("POST")
 	r.HandleFunc("/products/", getProducts).Methods("GET")
 	r.HandleFunc("/products/", createProduct).Methods("POST")
-	//r.HandleFunc("/products/:id", updateProduct).Methods("PUT")
+	r.HandleFunc("/products/{id:[0-9]+}", updateProduct).Methods("PUT")
 	r.HandleFunc("/products/{id:[0-9]+}", getSingleProduct).Methods("GET")
 	r.HandleFunc("/products/{id:[0-9]+}", deleteProduct).Methods("DELETE")
 	r.HandleFunc("/logout", logout).Methods("POST")
@@ -276,6 +276,133 @@ func getSingleProduct(w http.ResponseWriter, req *http.Request) {
 	w.Write(js)
 }
 
+func updateProduct(w http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodPut {
+		http.Error(w, http.StatusText(405), http.StatusMethodNotAllowed)
+		return
+	}
+	req.ParseMultipartForm(10 << 20)
+	blacklistToken := checkBlacklist(w, req)
+	if blacklistToken != "" {
+		w.WriteHeader(http.StatusUnauthorized)
+	}
+	err := tokenValid(w, req)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	vars := mux.Vars(req)
+	fmt.Println("vars", vars)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	row := db.QueryRow("select * from products where id=$1", id)
+	pd := Product{}
+	err = row.Scan(&pd.ID, &pd.Name, &pd.Price, &pd.Picture, &pd.Created)
+	switch {
+	case err == sql.ErrNoRows:
+		http.NotFound(w, req)
+		return
+	case err != nil:
+		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+		return
+	}
+	fmt.Println("pd", pd)
+	n := req.PostFormValue("name")
+	p := req.PostFormValue("price")
+	if p != "" {
+		s, err := strconv.ParseFloat(p, 64)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		_, err = db.Query("update products set price=$1 where id=$2", s, id)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+	}
+	//file uploading
+	file, header, err := req.FormFile("picture")
+	fmt.Println(err)
+	// if err != nil {
+	// 	w.WriteHeader(http.StatusBadRequest)
+	// 	return
+	// }
+	if file != nil {
+		defer file.Close()
+		fmt.Println("uploaded file:", header.Filename)
+		fmt.Println("file size:", header.Size)
+		fmt.Println("MIME header:", header.Header)
+		tempFile, err := ioutil.TempFile("products", "upload-*.png")
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		defer tempFile.Close()
+		fileBytes, err := ioutil.ReadAll(file)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		tempFile.Write(fileBytes)
+		fmt.Println("successfully uploaded file")
+		fileName := tempFile.Name()
+		fmt.Println(fileName)
+		v := strings.TrimPrefix(fileName, `products\`)
+		_, err = db.Query("update products set picture=$1 where id=$2", v, id)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		picturename := "products/" + pd.Picture
+		fmt.Println("remove photo", picturename)
+		err = os.Remove(picturename)
+	}
+	if n != "" {
+		_, err = db.Query("update products set name=$1 where id=$2", n, id)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+	}
+	// if p != "" {
+	// 	_, err = db.Query("update products set price=$1 where id=$2", s, id)
+	// 	if err != nil {
+	// 		http.Error(w, err.Error(), 500)
+	// 		return
+	// 	}
+	// }
+	// if file != nil {
+	// 	_, err = db.Query("update products set picture=$1 where id=$2", v, id)
+	// 	if err != nil {
+	// 		http.Error(w, err.Error(), 500)
+	// 		return
+	// 	}
+	// }
+
+	updatedRow := db.QueryRow("select * from products where id=$1", id)
+	pdct := Product{}
+	err = updatedRow.Scan(&pdct.ID, &pdct.Name, &pdct.Price, &pdct.Picture, &pd.Created)
+	fmt.Println("pdct", pdct)
+	switch {
+	case err == sql.ErrNoRows:
+		http.NotFound(w, req)
+		return
+	case err != nil:
+		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+		return
+	}
+	js, err := json.Marshal(pdct)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
+}
 func deleteProduct(w http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodDelete {
 		http.Error(w, http.StatusText(405), http.StatusMethodNotAllowed)

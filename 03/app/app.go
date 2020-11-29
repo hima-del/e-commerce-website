@@ -10,7 +10,7 @@ var (
 	r = mux.NewRouter()
 )
 
-func startApp() {
+func StartApp() {
 	mapUrls()
 	http.ListenAndServe(":80", r)
 }

@@ -1,4 +1,4 @@
-package domain
+package model
 
 type Credentials struct {
 	Username string `json:"username"`

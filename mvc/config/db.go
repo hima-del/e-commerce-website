@@ -7,15 +7,15 @@ import (
 	_ "github.com/lib/pq"
 )
 
-var db *sql.DB
+var DB *sql.DB
 
 func init() {
 	var err error
-	db, err = sql.Open("postgres", "postgres://himaja:password@localhost/ecommerce_web?sslmode=disable")
+	DB, err = sql.Open("postgres", "postgres://himaja:password@localhost/ecommerce_web?sslmode=disable")
 	if err != nil {
 		panic(err)
 	}
-	err = db.Ping()
+	err = DB.Ping()
 	if err != nil {
 		panic(err)
 	}

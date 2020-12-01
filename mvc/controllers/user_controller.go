@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"../auth"
 	"../model"
 	"../services"
 	"github.com/dgrijalva/jwt-go"
@@ -21,7 +22,7 @@ func Signup(w http.ResponseWriter, req *http.Request) {
 		defer req.Body.Close()
 		if err != nil {
 			http.Error(w, err.Error(), 500)
-			returns
+			return
 		}
 		var creds model.Credentials
 		err = json.Unmarshal(b, &creds)
@@ -29,21 +30,31 @@ func Signup(w http.ResponseWriter, req *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		token, err := services.Signup(creds.Username)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
+		result := services.Usernameexists(creds.Username)
+		var s string = "username already taken"
+		if result != "" {
+			stringdata, err := json.Marshal(s)
+			if err != nil {
+				fmt.Println(err)
+			}
+			w.Write(stringdata)
+		} else {
+			token, err := services.Signup(creds.Username, creds.Password)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			tokens := map[string]string{
+				"acces_token":   token.AccessToken,
+				"refresh_token": token.RefreshToken,
+			}
+			data, err := json.Marshal(tokens)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			w.Write(data)
 		}
-		tokens := map[string]string{
-			"acces_token":   token.AccessToken,
-			"refresh_token": token.RefreshToken,
-		}
-		data, err := json.Marshal(tokens)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		w.Write(data)
 	}
 }
 
@@ -55,13 +66,13 @@ func Login(w http.ResponseWriter, req *http.Request) {
 		}
 		beartoken := req.Header.Get("Authorization")
 		if beartoken == "" {
-			creds := &Credentials{}
+			creds := &model.Credentials{}
 			err := json.NewDecoder(req.Body).Decode(creds)
 			if err != nil {
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
-			token, err := services.Login(creds.Username)
+			token, err := services.Login(creds.Username, creds.Password)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
@@ -77,20 +88,15 @@ func Login(w http.ResponseWriter, req *http.Request) {
 			}
 			w.Write(data)
 		} else if beartoken != "" {
-			tokenString := extractToken(req)
 			claims := jwt.MapClaims{}
-			token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-				return []byte("REFRESH_SECRET"), nil
-			})
-			fmt.Println(token)
+			tokenString := auth.ExtractToken(req)
+			ok, err := services.Refresh(tokenString)
 			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
+				fmt.Println(err)
 			}
-			_, ok := claims["refresh_uuid"]
 			if ok == true {
 				idExtracted := claims["username"]
-				newAccesstoken, err := createAccessToken(idExtracted)
+				newAccesstoken, err := auth.CreateAccessToken(idExtracted)
 				if err != nil {
 					w.WriteHeader(http.StatusInternalServerError)
 					return
@@ -111,3 +117,7 @@ func Login(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 }
+
+// func CreateProduct(w http.ResponseWriter, req *http.Request) {
+
+// }

@@ -1,44 +1,44 @@
 package services
 
 import (
-	"encoding/json"
 	"fmt"
 
+	"../auth"
 	"../dao"
+	"../model"
+	"github.com/dgrijalva/jwt-go"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func Signup(username string) (*model.TokenDetails, error) {
-	result := dao.QueryOne(username)
-	var s string = "username already taken"
-	if result != "" {
-		stringdata, err := json.Marshal(s)
-		if err != nil {
-			fmt.Println(err)
-		}
-		w.Write(stringdata)
-	} else {
-		hashedpassword, err := bcrypt.GenerateFromPassword([]byte(creds.Password), 8)
-		dao.QueryTwo(creds.Username, string(hashedpassword))
-		id := dao.QueryThree(creds.Username)
-		token, err := jwt.CreateToken(id, creds.Username)
-		if err != nil {
-			fmt.Println(err)
-		}
-		return token, err
-	}
+func Usernameexists(username string) (result string) {
+	result = dao.QueryOne(username)
+	return
 }
 
-func Login(username string){
-	storedCreds:=dao.QueryFour(username)
-	if err = bcrypt.CompareHashAndPassword([]byte(storedCreds.Password), []byte(creds.Password)); err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
+func Signup(username, password string) (token *model.TokenDetails, err error) {
+	hashedpassword, err := bcrypt.GenerateFromPassword([]byte(password), 8)
+	dao.QueryTwo(username, string(hashedpassword))
+	id := dao.QueryThree(username)
+	token, err = auth.CreateToken(id, username)
+	return token, err
+}
+
+func Login(username, password string) (token *model.TokenDetails, err error) {
+	storedCreds := dao.QueryFour(username)
+	if err := bcrypt.CompareHashAndPassword([]byte(storedCreds.Password), []byte(password)); err != nil {
+		fmt.Println(err)
 	}
-	id:=dao.QueryThree(username)
-	token, err := jwt.CreateToken(id, creds.Username)
-		if err != nil {
-			fmt.Println(err)
-		}
-		return token, err
-	}
+	id := dao.QueryThree(username)
+	token, err = auth.CreateToken(id, username)
+	return token, err
+}
+
+func Refresh(tokenString string) (ok bool, err error) {
+	claims := jwt.MapClaims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte("REFRESH_SECRET"), nil
+	})
+	fmt.Println(token)
+	_, ok = claims["refresh_uuid"]
+	return ok, err
 }

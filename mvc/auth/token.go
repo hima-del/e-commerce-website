@@ -1,4 +1,4 @@
-package main
+package auth
 
 import (
 	"fmt"
@@ -7,7 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"./model"
+	"../config"
+	"../model"
 	"github.com/dgrijalva/jwt-go"
 	uuid "github.com/satori/go.uuid"
 )
@@ -22,8 +23,8 @@ func ExtractToken(req *http.Request) string {
 }
 
 func CheckBlacklist(w http.ResponseWriter, req *http.Request) string {
-	tokenString := extractToken(req)
-	result := db.QueryRow("select * from blacklist where token=$1", tokenString)
+	tokenString := ExtractToken(req)
+	result := config.DB.QueryRow("select * from blacklist where token=$1", tokenString)
 	var blacklistedToken string
 	err := result.Scan(&blacklistedToken)
 	if err != nil {
@@ -33,7 +34,7 @@ func CheckBlacklist(w http.ResponseWriter, req *http.Request) string {
 }
 
 func VerifyToken(w http.ResponseWriter, req *http.Request) (*jwt.Token, error) {
-	tokenString := extractToken(req)
+	tokenString := ExtractToken(req)
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		_, ok := token.Method.(*jwt.SigningMethodHMAC)
 		if !ok {
@@ -48,7 +49,7 @@ func VerifyToken(w http.ResponseWriter, req *http.Request) (*jwt.Token, error) {
 }
 
 func TokenValid(w http.ResponseWriter, req *http.Request) error {
-	token, err := verifyToken(w, req)
+	token, err := VerifyToken(w, req)
 	if err != nil {
 		return err
 	}

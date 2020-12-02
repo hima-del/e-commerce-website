@@ -11,7 +11,7 @@ var DB *sql.DB
 
 func init() {
 	var err error
-	DB, err = sql.Open("postgres", "postgres://himaja:password@localhost/ecommerce_web?sslmode=disable")
+	DB, err = sql.Open("postgres", "postgres://himaja:password@localhost/e_commerce_task?sslmode=disable")
 	if err != nil {
 		panic(err)
 	}

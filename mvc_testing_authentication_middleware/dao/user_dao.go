@@ -2,7 +2,6 @@ package dao
 
 import (
 	"../config"
-	"../model"
 )
 
 func QueryOne(username string) (name string, err error) {
@@ -22,9 +21,8 @@ func QueryThree(username string) (id int, err error) {
 	return id, err
 }
 
-func QueryFour(username string) (storedCreds *model.Credentials, err error) {
+func QueryFour(username string) (storedPassword string, err error) {
 	result := config.DB.QueryRow("select password from customers where username=$1", username)
-	storedCreds = &model.Credentials{}
-	err = result.Scan(&storedCreds.Password)
-	return storedCreds, err
+	err = result.Scan(&storedPassword)
+	return storedPassword, err
 }

@@ -30,7 +30,11 @@ func Signup(w http.ResponseWriter, req *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		result := services.Usernameexists(creds.Username)
+		result, err := services.Usernameexists(creds.Username)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		var s string = "username already taken"
 		if result != "" {
 			stringdata, err := json.Marshal(s)

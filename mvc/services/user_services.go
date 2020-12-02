@@ -10,25 +10,25 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func Usernameexists(username string) (result string) {
-	result = dao.QueryOne(username)
-	return
+func Usernameexists(username string) (result string, err error) {
+	result, err = dao.QueryOne(username)
+	return result, err
 }
 
 func Signup(username, password string) (token *model.TokenDetails, err error) {
 	hashedpassword, err := bcrypt.GenerateFromPassword([]byte(password), 8)
-	dao.QueryTwo(username, string(hashedpassword))
-	id := dao.QueryThree(username)
+	err = dao.QueryTwo(username, string(hashedpassword))
+	id, err := dao.QueryThree(username)
 	token, err = auth.CreateToken(id, username)
 	return token, err
 }
 
 func Login(username, password string) (token *model.TokenDetails, err error) {
-	storedCreds := dao.QueryFour(username)
+	storedCreds, err := dao.QueryFour(username)
 	if err := bcrypt.CompareHashAndPassword([]byte(storedCreds.Password), []byte(password)); err != nil {
 		fmt.Println(err)
 	}
-	id := dao.QueryThree(username)
+	id, err := dao.QueryThree(username)
 	token, err = auth.CreateToken(id, username)
 	return token, err
 }

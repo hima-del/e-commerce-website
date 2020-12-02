@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -31,33 +30,6 @@ func CheckBlacklist(w http.ResponseWriter, req *http.Request) string {
 		return ""
 	}
 	return blacklistedToken
-}
-
-func VerifyToken(w http.ResponseWriter, req *http.Request) (*jwt.Token, error) {
-	tokenString := ExtractToken(req)
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		_, ok := token.Method.(*jwt.SigningMethodHMAC)
-		if !ok {
-			return nil, fmt.Errorf("unexpected signing method:%v", token.Header["alg"])
-		}
-		return []byte(os.Getenv("ACCESS_SECRET")), nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return token, nil
-}
-
-func TokenValid(w http.ResponseWriter, req *http.Request) error {
-	token, err := VerifyToken(w, req)
-	if err != nil {
-		return err
-	}
-	_, ok := token.Claims.(jwt.Claims)
-	if !ok && !token.Valid {
-		return err
-	}
-	return nil
 }
 
 func CreateToken(userid int, username string) (*model.TokenDetails, error) {

@@ -24,10 +24,8 @@ func Signup(username, password string) (token *model.TokenDetails, err error) {
 }
 
 func Login(username, password string) (token *model.TokenDetails, err error) {
-	storedCreds, err := dao.QueryFour(username)
-	if err := bcrypt.CompareHashAndPassword([]byte(storedCreds.Password), []byte(password)); err != nil {
-		fmt.Println(err)
-	}
+	storedPassword, err := dao.QueryFour(username)
+	err = bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(password))
 	id, err := dao.QueryThree(username)
 	token, err = auth.CreateToken(id, username)
 	return token, err

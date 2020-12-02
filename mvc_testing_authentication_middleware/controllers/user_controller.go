@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -10,6 +11,7 @@ import (
 	"../model"
 	"../services"
 	"github.com/dgrijalva/jwt-go"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func Signup(w http.ResponseWriter, req *http.Request) {
@@ -31,19 +33,26 @@ func Signup(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 		result, err := services.Usernameexists(creds.Username)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
 		var s string = "username already taken"
 		if result != "" {
 			stringdata, err := json.Marshal(s)
 			if err != nil {
-				fmt.Println(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
 			}
 			w.Write(stringdata)
 		} else {
-			token, err := services.Signup(creds.Username, creds.Password)
+			hashedPassword, err := services.HashPassword(creds.Password)
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			err = services.InsertToCustomers(creds.Username, string(hashedPassword))
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			token, err := services.Signup(creds.Username)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
@@ -76,8 +85,26 @@ func Login(w http.ResponseWriter, req *http.Request) {
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
-			token, err := services.Login(creds.Username, creds.Password)
+			storedPassword, err := services.ExistingUser(creds.Username)
 			if err != nil {
+				if err == sql.ErrNoRows {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			err = bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(creds.Password))
+			if err != nil {
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			token, err := services.Login(creds.Username)
+			if err != nil {
+				if err == sql.ErrNoRows {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}

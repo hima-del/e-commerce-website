@@ -24,7 +24,7 @@
  CREATE TABLE "order_details"("id"bigserial PRIMARY KEY,
  "product id"INT NOT NULL,
  "order id"INT NOT NULL,
- "order number"INT NOT NULL,
+ "order number"serial NOT NULL,
  "price"FLOAT NOT NULL,
  "discount"FLOAT NOT NULL,
  "total"FLOAT NOT NULL,

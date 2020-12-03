@@ -26,7 +26,6 @@ func CreateProduct(w http.ResponseWriter, req *http.Request) {
 	n := req.FormValue("name")
 	p := req.FormValue("price")
 	s, err := strconv.ParseFloat(p, 64)
-	fmt.Printf("%T", s)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return

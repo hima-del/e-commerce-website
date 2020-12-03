@@ -23,11 +23,6 @@ func CreateProduct(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
-	err := auth.TokenValid(w, req)
-	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
 	n := req.FormValue("name")
 	p := req.FormValue("price")
 	s, err := strconv.ParseFloat(p, 64)
@@ -73,11 +68,6 @@ func GetProducts(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
-	err := auth.TokenValid(w, req)
-	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
 	productsList, err := services.GetProducts()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -99,11 +89,6 @@ func GetSingleProduct(w http.ResponseWriter, req *http.Request) {
 	}
 	blacklistToken := auth.CheckBlacklist(w, req)
 	if blacklistToken != "" {
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-	err := auth.TokenValid(w, req)
-	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -140,11 +125,6 @@ func DeleteProduct(w http.ResponseWriter, req *http.Request) {
 	if blacklistToken != "" {
 		w.WriteHeader(http.StatusUnauthorized)
 	}
-	err := auth.TokenValid(w, req)
-	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
 	vars := mux.Vars(req)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
@@ -167,11 +147,6 @@ func UpdateProduct(w http.ResponseWriter, req *http.Request) {
 	blacklistToken := auth.CheckBlacklist(w, req)
 	if blacklistToken != "" {
 		w.WriteHeader(http.StatusUnauthorized)
-	}
-	err := auth.TokenValid(w, req)
-	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		return
 	}
 	vars := mux.Vars(req)
 	id, err := strconv.Atoi(vars["id"])
@@ -210,13 +185,8 @@ func Logout(w http.ResponseWriter, req *http.Request) {
 		if blacklistToken != "" {
 			w.WriteHeader(http.StatusUnauthorized)
 		} else {
-			err := auth.TokenValid(w, req)
-			if err != nil {
-				w.WriteHeader(http.StatusUnauthorized)
-				return
-			}
 			tokenStringLogout := auth.ExtractToken(req)
-			err = services.Logout(tokenStringLogout)
+			err := services.Logout(tokenStringLogout)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return

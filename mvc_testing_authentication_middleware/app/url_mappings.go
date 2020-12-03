@@ -13,5 +13,6 @@ func mapUrls() {
 	r.HandleFunc("/products/{id:[0-9]+}", middlewares.Middleware(controllers.UpdateProduct)).Methods("PUT")
 	r.HandleFunc("/products/{id:[0-9]+}", middlewares.Middleware(controllers.GetSingleProduct)).Methods("GET")
 	r.HandleFunc("/products/{id:[0-9]+}", middlewares.Middleware(controllers.DeleteProduct)).Methods("DELETE")
+	r.HandleFunc("/order/", middlewares.Middleware(controllers.CreateOrder)).Methods("POST")
 	r.HandleFunc("/logout", middlewares.Middleware(controllers.Logout)).Methods("POST")
 }

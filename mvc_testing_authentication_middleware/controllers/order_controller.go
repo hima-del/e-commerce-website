@@ -1,10 +1,12 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"../auth"
+	"../services"
 )
 
 func CreateOrder(w http.ResponseWriter, req *http.Request) {
@@ -26,7 +28,7 @@ func CreateOrder(w http.ResponseWriter, req *http.Request) {
 	priceValue := req.PostFormValue("price")
 	price, err := strconv.ParseFloat(priceValue, 64)
 	quantityValue := req.PostFormValue("quantity")
-	quantity, err := strconv.ParseFloat(quantityValue, 64)
+	quantity, err := strconv.Atoi(quantityValue)
 	discountValue := req.PostFormValue("discount")
 	discount, err := strconv.ParseFloat(discountValue, 64)
 	totalValue := req.PostFormValue("total")
@@ -38,6 +40,14 @@ func CreateOrder(w http.ResponseWriter, req *http.Request) {
 	size := req.PostFormValue("size")
 	color := req.PostFormValue("color")
 	tokenString := auth.ExtractToken(req)
-	err = services.CreateOrder(tokenString, orderDate, shippingDate, orderStatus, billingAddress, shippingAddress, price, quantity, discount, total, size, color)
-
+	extractedID, err := services.ExtractID(tokenString)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println("id", extractedID)
+	err = services.CreateOrder(extractedID, quantity, orderDate, shippingDate, orderStatus, billingAddress, shippingAddress, size, color, price, discount, total)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 }

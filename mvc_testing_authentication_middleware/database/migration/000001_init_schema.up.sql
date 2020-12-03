@@ -14,8 +14,8 @@
 
  CREATE TABLE "orders"("id"bigserial PRIMARY KEY,
  "customer id"INT NOT NULL,
- "order date" TEXT NOT NULL,
- "ship date"TEXT NOT NULL,
+ "order date" DATE NOT NULL,
+ "ship date"DATE NOT NULL,
  "shipping address"TEXT NOT NULL,
  "order status"TEXT NOT NULL,
  "created_at" timestamptz NOT NULL DEFAULT (now())

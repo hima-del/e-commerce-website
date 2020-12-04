@@ -1,24 +1,26 @@
 package dao
 
-import "../config"
+import (
+	"../config"
+)
 
-func QueryFifteen(extrctedID int, billingAddress, shippingAddress string) (err error) {
-	_, err = config.DB.Query("insert into address (customer id,billing address,shipping address)values ($1,$2,$3)", extrctedID, billingAddress, shippingAddress)
+func QueryFifteen(ID int, billingAddress, shippingAddress string) (err error) {
+	_, err = config.DB.Query("insert into address (customerid,billingaddress,shippingaddress)values ($1,$2,$3)", ID, billingAddress, shippingAddress)
 	return err
 }
 
-func QuerySixteen(extrctedID int, orderDate, shippingDate, shippingAddress, orderStatus string) (err error) {
-	_, err = config.DB.Query("insert into orders (customer id,order date,ship date,shipping address, order status)values ($1,$2,$3,$4,$5)", extrctedID, orderDate, shippingDate, shippingAddress, orderStatus)
+func QuerySixteen(ID int, orderDate, shippingDate, shippingAddress, orderStatus string) (err error) {
+	_, err = config.DB.Query("insert into orders (customerid,orderdate,shipdate,shippingaddress, orderstatus)values ($1,$2,$3,$4,$5)", ID, orderDate, shippingDate, shippingAddress, orderStatus)
 	return err
 }
 
-func QuerySeventeen(extractedID int) (id int, err error) {
-	result := config.DB.QueryRow("select id from orders where customer id=$1", extractedID)
+func QuerySeventeen(ID int) (id int, err error) {
+	result := config.DB.QueryRow("select id from orders where customerid=$1", ID)
 	err = result.Scan(&id)
 	return id, err
 }
 
-func QueryEighteen(orderID int, price, discount, total float64, quantity int, color, size string) (err error) {
-	_, err = config.DB.Query("insert into order_details (order id, price, discount, total,quantity,color,size)values ($1,$2,$3,$4,$5,$6,$7)", orderID, price, discount, total, quantity, color, size)
+func QueryEighteen(productid, orderID, ordernumber int, price, discount, total float64, quantity int, color, size string) (err error) {
+	_, err = config.DB.Query("insert into orderdetails (productid,orderid,ordernumber, price, discount, total,quantity,color,size)values ($1,$2,$3,$4,$5,$6,$7,$8,$9)", productid, orderID, ordernumber, price, discount, total, quantity, color, size)
 	return err
 }

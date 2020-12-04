@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -20,6 +19,10 @@ func CreateOrder(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
+	productidvalue := req.PostFormValue("product id")
+	productid, err := strconv.Atoi(productidvalue)
+	ordernumbervalue := req.PostFormValue("order number")
+	ordernumber, err := strconv.Atoi(ordernumbervalue)
 	orderDate := req.PostFormValue("order date")
 	shippingDate := req.PostFormValue("shipping date")
 	orderStatus := req.PostFormValue("order status")
@@ -40,12 +43,8 @@ func CreateOrder(w http.ResponseWriter, req *http.Request) {
 	size := req.PostFormValue("size")
 	color := req.PostFormValue("color")
 	tokenString := auth.ExtractToken(req)
-	extractedID, err := services.ExtractID(tokenString)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println("id", extractedID)
-	err = services.CreateOrder(extractedID, quantity, orderDate, shippingDate, orderStatus, billingAddress, shippingAddress, size, color, price, discount, total)
+	extractedID := services.ExtractID(tokenString)
+	err = services.CreateOrder(extractedID, quantity, productid, ordernumber, orderDate, shippingDate, orderStatus, billingAddress, shippingAddress, size, color, price, discount, total)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return

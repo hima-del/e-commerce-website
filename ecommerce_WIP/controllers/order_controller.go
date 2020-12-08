@@ -82,3 +82,11 @@ func DeleteOrder(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 }
+
+func GetOrders(w http.ResponseWriter, req *http.Request) {
+
+}
+
+func GetSingleOrder(w http.ResponseWriter, req *http.Request) {
+
+}

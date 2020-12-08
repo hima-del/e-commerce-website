@@ -38,3 +38,8 @@ func QueryTwenty(id int) (order model.OrderDetails, err error) {
 	err = row.Scan(&order.ID, &order.Productid, &order.Orderid, &order.Ordernumber, &order.Price, &order.Discount, &order.Total, &order.Quantity, &order.Color, &order.Size, &order.Created)
 	return order, err
 }
+
+func QueryTwentyone(id int) (err error) {
+	_, err = config.DB.Query("delete from orderdetails where id=$1", id)
+	return err
+}

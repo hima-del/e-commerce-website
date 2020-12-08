@@ -2,7 +2,6 @@ package services
 
 import (
 	"fmt"
-	"net/http"
 
 	"../dao"
 	"../model"
@@ -35,6 +34,7 @@ func ExtractID(tokenString string) (ID int) {
 	return ID
 }
 
-func DeleteOrder(w http.ResponseWriter, req *http.Request) {
-
+func DeleteOrder(id int) (err error) {
+	err = dao.QueryTwentyone(id)
+	return err
 }

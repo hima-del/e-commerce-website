@@ -1,11 +1,13 @@
 package controllers
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 
 	"../auth"
 	"../services"
+	"github.com/gorilla/mux"
 )
 
 func CreateOrder(w http.ResponseWriter, req *http.Request) {
@@ -44,7 +46,37 @@ func CreateOrder(w http.ResponseWriter, req *http.Request) {
 	color := req.PostFormValue("color")
 	tokenString := auth.ExtractToken(req)
 	extractedID := services.ExtractID(tokenString)
-	err = services.CreateOrder(extractedID, quantity, productid, ordernumber, orderDate, shippingDate, orderStatus, billingAddress, shippingAddress, size, color, price, discount, total)
+	order, err := services.CreateOrder(extractedID, quantity, productid, ordernumber, orderDate, shippingDate, orderStatus, billingAddress, shippingAddress, size, color, price, discount, total)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	js, err := json.Marshal(order)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
+}
+
+func DeleteOrder(w http.ResponseWriter, req *http.Request) {
+	if req.Method != "DELETE" {
+		http.Error(w, http.StatusText(405), http.StatusMethodNotAllowed)
+		return
+	}
+	blacklistToken := auth.CheckBlacklist(w, req)
+	if blacklistToken != "" {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	vars := mux.Vars(req)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	err = services.DeleteOrder(id)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return

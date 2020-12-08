@@ -2,17 +2,21 @@ package services
 
 import (
 	"fmt"
+	"net/http"
 
 	"../dao"
+	"../model"
 	"github.com/dgrijalva/jwt-go"
 )
 
-func CreateOrder(ID, quantity, productid, ordernumber int, orderDate, shippingDate, orderStatus, billingAddress, shippingAddress, size, color string, price, discount, total float64) (err error) {
+func CreateOrder(ID, quantity, productid, ordernumber int, orderDate, shippingDate, orderStatus, billingAddress, shippingAddress, size, color string, price, discount, total float64) (order model.OrderDetails, err error) {
 	err = dao.QueryFifteen(ID, billingAddress, shippingAddress)
 	err = dao.QuerySixteen(ID, orderDate, shippingDate, shippingAddress, orderStatus)
 	orderID, err := dao.QuerySeventeen(ID)
 	err = dao.QueryEighteen(productid, orderID, ordernumber, price, discount, total, quantity, color, size)
-	return err
+	Queryid, err := dao.QueryNineteen(ordernumber)
+	order, err = dao.QueryTwenty(Queryid)
+	return order, err
 }
 
 func ExtractID(tokenString string) (ID int) {
@@ -29,4 +33,8 @@ func ExtractID(tokenString string) (ID int) {
 	fmt.Println(v, ok)
 	ID = int(v)
 	return ID
+}
+
+func DeleteOrder(w http.ResponseWriter, req *http.Request) {
+
 }

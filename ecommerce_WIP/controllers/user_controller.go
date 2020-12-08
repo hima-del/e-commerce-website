@@ -148,3 +148,20 @@ func Login(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 }
+
+func Logout(w http.ResponseWriter, req *http.Request) {
+	if req.Method == http.MethodPost {
+		blacklistToken := auth.CheckBlacklist(w, req)
+		if blacklistToken != "" {
+			w.WriteHeader(http.StatusUnauthorized)
+		} else {
+			tokenStringLogout := auth.ExtractToken(req)
+			err := services.Logout(tokenStringLogout)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			fmt.Println("successfully logged out")
+		}
+	}
+}

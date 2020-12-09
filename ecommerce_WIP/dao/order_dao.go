@@ -43,3 +43,15 @@ func QueryTwentyone(id int) (err error) {
 	_, err = config.DB.Query("delete from orderdetails where id=$1", id)
 	return err
 }
+
+func QueryTwentytwo() (orderslist []model.OrderDetails, err error) {
+	rows, err := config.DB.Query("select * from orderdetails")
+	defer rows.Close()
+	orderslist = make([]model.OrderDetails, 0)
+	for rows.Next() {
+		order := model.OrderDetails{}
+		err = rows.Scan(&order.ID, &order.Productid, &order.Orderid, &order.Ordernumber, &order.Price, &order.Discount, &order.Total, &order.Quantity, &order.Color, &order.Size, &order.Created)
+		orderslist = append(orderslist, order)
+	}
+	return orderslist, err
+}

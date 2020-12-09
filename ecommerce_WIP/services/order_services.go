@@ -38,3 +38,8 @@ func DeleteOrder(id int) (err error) {
 	err = dao.QueryTwentyone(id)
 	return err
 }
+
+func GetOrders() (orderList []model.OrderDetails, err error) {
+	orderList, err = dao.QueryTwentytwo()
+	return orderList, err
+}

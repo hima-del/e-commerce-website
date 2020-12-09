@@ -84,7 +84,27 @@ func DeleteOrder(w http.ResponseWriter, req *http.Request) {
 }
 
 func GetOrders(w http.ResponseWriter, req *http.Request) {
-
+	if req.Method != "GET" {
+		http.Error(w, http.StatusText(405), http.StatusMethodNotAllowed)
+		return
+	}
+	blacklistToken := auth.CheckBlacklist(w, req)
+	if blacklistToken != "" {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	orderList, err := services.GetOrders()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	js, err := json.Marshal(orderList)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
 }
 
 func GetSingleOrder(w http.ResponseWriter, req *http.Request) {

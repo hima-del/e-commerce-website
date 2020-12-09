@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -108,5 +109,35 @@ func GetOrders(w http.ResponseWriter, req *http.Request) {
 }
 
 func GetSingleOrder(w http.ResponseWriter, req *http.Request) {
-
+	if req.Method != "GET" {
+		http.Error(w, http.StatusText(405), http.StatusMethodNotAllowed)
+		return
+	}
+	blacklistToken := auth.CheckBlacklist(w, req)
+	if blacklistToken != "" {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	vars := mux.Vars(req)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	order, err := services.GetSingleOrder(id)
+	switch {
+	case err == sql.ErrNoRows:
+		http.NotFound(w, req)
+		return
+	case err != nil:
+		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+		return
+	}
+	js, err := json.Marshal(order)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
 }

@@ -55,3 +55,10 @@ func QueryTwentytwo() (orderslist []model.OrderDetails, err error) {
 	}
 	return orderslist, err
 }
+
+func QueryTwentythree(id int) (order model.OrderDetails, err error) {
+	row := config.DB.QueryRow("select * from orderdetails where id=$1", id)
+	order = model.OrderDetails{}
+	err = row.Scan(&order.ID, &order.Productid, &order.Orderid, &order.Ordernumber, &order.Price, &order.Discount, &order.Total, &order.Quantity, &order.Color, &order.Size, &order.Created)
+	return order, err
+}

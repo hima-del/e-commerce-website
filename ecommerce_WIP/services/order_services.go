@@ -43,3 +43,8 @@ func GetOrders() (orderList []model.OrderDetails, err error) {
 	orderList, err = dao.QueryTwentytwo()
 	return orderList, err
 }
+
+func GetSingleOrder(id int) (order model.OrderDetails, err error) {
+	order, err = dao.QueryTwentythree(id)
+	return order, err
+}
